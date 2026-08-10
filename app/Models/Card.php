@@ -1,0 +1,78 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
+
+/**
+ * @property int $id
+ * @property string $code
+ * @property int|null $set_id
+ * @property int|null $faction_id
+ * @property string $name
+ * @property string $type
+ * @property int $cost
+ * @property string $rarity
+ * @property int|null $power
+ * @property int|null $health
+ * @property array<int, string> $keywords
+ * @property string|null $text
+ * @property array<int, array<string, mixed>> $effects
+ * @property string $finish
+ * @property string|null $frame_variant
+ * @property string|null $art_url
+ * @property int $sort
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
+#[Fillable([
+    'code',
+    'set_id',
+    'faction_id',
+    'name',
+    'type',
+    'cost',
+    'rarity',
+    'power',
+    'health',
+    'keywords',
+    'text',
+    'effects',
+    'finish',
+    'frame_variant',
+    'art_url',
+    'sort',
+])]
+class Card extends Model
+{
+    /**
+     * The set this card belongs to.
+     *
+     * @return BelongsTo<CardSet, $this>
+     */
+    public function set(): BelongsTo
+    {
+        return $this->belongsTo(CardSet::class);
+    }
+
+    /**
+     * The faction this card belongs to, if any.
+     *
+     * @return BelongsTo<Faction, $this>
+     */
+    public function faction(): BelongsTo
+    {
+        return $this->belongsTo(Faction::class);
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'keywords' => 'array',
+            'effects' => 'array',
+        ];
+    }
+}

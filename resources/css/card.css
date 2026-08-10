@@ -1,0 +1,116 @@
+/*
+ * Card visual system. Rarity is recognizable while static; foil layers and
+ * pointer tilt only move on a hovered or inspected card. See
+ * TODO/CARD_SHADER_DESIGN_GUIDE.md for the reference behaviour.
+ */
+.tcg-card {
+    --pointer-x: 50%;
+    --pointer-y: 50%;
+    --rotate-x: 0deg;
+    --rotate-y: 0deg;
+    position: relative;
+    overflow: hidden;
+    border-radius: calc(var(--radius) - 2px);
+    border: 1px solid color-mix(in oklab, var(--rarity-color) 60%, #000 25%);
+    background: var(--frame-bg, #16151a);
+    color: #f7f6f3;
+    box-shadow: 0 4px 14px rgb(0 0 0 / 0.35);
+    transform: perspective(900px) rotateX(var(--rotate-x))
+        rotateY(var(--rotate-y));
+    transition:
+        transform 160ms ease-out,
+        box-shadow 160ms ease-out,
+        border-color 160ms ease-out;
+}
+
+.tcg-card[data-interactive='true'] {
+    cursor: pointer;
+}
+
+.tcg-card[data-interactive='true']:hover {
+    box-shadow:
+        0 0 0 2px color-mix(in oklab, var(--rarity-color) 70%, transparent),
+        0 10px 26px rgb(0 0 0 / 0.5);
+    z-index: 10;
+}
+
+.tcg-card[data-selected='true'] {
+    box-shadow:
+        0 0 0 3px #ffffff,
+        0 0 0 5px var(--rarity-color),
+        0 10px 26px rgb(0 0 0 / 0.5);
+}
+
+.tcg-card[data-dimmed='true'] {
+    opacity: 0.55;
+    filter: saturate(0.6);
+}
+
+.tcg-card__art {
+    position: relative;
+    overflow: hidden;
+}
+
+.tcg-card__foil {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    background:
+        radial-gradient(
+            circle at var(--pointer-x) var(--pointer-y),
+            rgb(255 255 255 / 0.72),
+            transparent 26%
+        ),
+        repeating-linear-gradient(
+            115deg,
+            #ff5aa5 0 8%,
+            #f4e96a 8% 16%,
+            #55e6ff 16% 24%,
+            #9878ff 24% 32%
+        );
+    background-size:
+        100% 100%,
+        240% 240%;
+    background-position:
+        center,
+        var(--pointer-x) var(--pointer-y);
+    mix-blend-mode: screen;
+    transition: opacity 180ms ease-out;
+}
+
+.tcg-card[data-finish='foil'][data-interactive='true']:hover .tcg-card__foil,
+.tcg-card[data-finish='prismatic'][data-interactive='true']:hover
+    .tcg-card__foil {
+    opacity: 0.42;
+}
+
+.tcg-card[data-finish='prismatic'][data-animated='true'] .tcg-card__foil {
+    opacity: 0.24;
+    animation: tcg-foil-drift 5s linear infinite;
+}
+
+.tcg-card[data-finish='prismatic'][data-animated='false'] .tcg-card__foil {
+    opacity: 0.18;
+}
+
+@keyframes tcg-foil-drift {
+    to {
+        background-position:
+            center,
+            100% 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tcg-card,
+    .tcg-card__foil {
+        animation: none;
+        transition: none;
+        transform: none;
+    }
+
+    .tcg-card[data-finish='prismatic'] .tcg-card__foil {
+        opacity: 0.18;
+    }
+}
