@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Card;
 use App\Models\Faction;
+use App\Support\CardPresenter;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,23 +20,7 @@ class MatchController extends Controller
             ->orderBy('sort')
             ->orderBy('cost')
             ->get()
-            ->map(fn (Card $card): array => [
-                'id' => $card->code,
-                'set' => $card->set?->code ?? 'celestial-genesis',
-                'faction' => $card->faction?->code ?? 'neutral',
-                'name' => $card->name,
-                'type' => $card->type,
-                'rarity' => $card->rarity,
-                'cost' => $card->cost,
-                'power' => $card->power,
-                'health' => $card->health,
-                'keywords' => $card->keywords,
-                'text' => $card->text,
-                'effects' => $card->effects,
-                'finish' => $card->finish,
-                'frameVariant' => $card->frame_variant ?? $card->rarity,
-                'artUrl' => $card->art_url,
-            ]);
+            ->map(CardPresenter::toDef(...));
 
         $factions = Faction::all()->map(fn (Faction $faction): array => [
             'id' => $faction->code,

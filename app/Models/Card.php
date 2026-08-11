@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -20,7 +21,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $health
  * @property array<int, string> $keywords
  * @property string|null $text
- * @property array<int, array<string, mixed>> $effects
+ * @property array<int, array{trigger: string, actions: array<int, array<string, mixed>>}> $effects
  * @property string $finish
  * @property string|null $frame_variant
  * @property string|null $art_url
@@ -66,6 +67,16 @@ class Card extends Model
     public function faction(): BelongsTo
     {
         return $this->belongsTo(Faction::class);
+    }
+
+    /**
+     * Inventory entries granting this card to users.
+     *
+     * @return HasMany<UserCard, $this>
+     */
+    public function userCards(): HasMany
+    {
+        return $this->hasMany(UserCard::class);
     }
 
     protected function casts(): array

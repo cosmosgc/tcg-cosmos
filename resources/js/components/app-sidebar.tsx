@@ -1,5 +1,12 @@
 import { Link } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid, Swords } from 'lucide-react';
+import {
+    BookOpen,
+    FolderGit2,
+    LayoutGrid,
+    Layers,
+    PackageOpen,
+    Swords,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -14,6 +21,9 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard, match } from '@/routes';
+import collection from '@/routes/collection';
+import decks from '@/routes/decks';
+import packs from '@/routes/packs';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -21,6 +31,21 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+    },
+    {
+        title: 'Collection',
+        href: collection.index(),
+        icon: Layers,
+    },
+    {
+        title: 'Decks',
+        href: decks.index(),
+        icon: FolderGit2,
+    },
+    {
+        title: 'Booster',
+        href: packs.index(),
+        icon: PackageOpen,
     },
     {
         title: 'Match',

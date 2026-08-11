@@ -14,8 +14,9 @@ class GameDataSeeder extends Seeder
      */
     public function run(): void
     {
-        $set = CardSet::create([
+        $set = CardSet::updateOrCreate([
             'code' => 'celestial-genesis',
+        ], [
             'name' => 'Celestial Genesis',
         ]);
 
@@ -27,7 +28,10 @@ class GameDataSeeder extends Seeder
         ];
 
         foreach ($factionRows as $row) {
-            $factions[$row['code']] = Faction::create($row);
+            $factions[$row['code']] = Faction::updateOrCreate(
+                ['code' => $row['code']],
+                $row,
+            );
         }
 
         $factionCards = [
@@ -121,22 +125,24 @@ class GameDataSeeder extends Seeder
         }
 
         foreach ($leaders as [$code, $name, $factionCode, $health]) {
-            Card::create([
-                'code' => $code,
-                'set_id' => $set->id,
-                'faction_id' => $factions[$factionCode]->id,
-                'name' => $name,
-                'type' => 'leader',
-                'cost' => 0,
-                'rarity' => 'legendary',
-                'health' => $health,
-                'keywords' => [],
-                'text' => 'Your identity on the field. If this leader reaches 0 health, you lose.',
-                'effects' => [],
-                'finish' => 'aurora',
-                'frame_variant' => $factionCode.'-legendary',
-                'sort' => 0,
-            ]);
+            Card::updateOrCreate(
+                ['code' => $code],
+                [
+                    'set_id' => $set->id,
+                    'faction_id' => $factions[$factionCode]->id,
+                    'name' => $name,
+                    'type' => 'leader',
+                    'cost' => 0,
+                    'rarity' => 'legendary',
+                    'health' => $health,
+                    'keywords' => [],
+                    'text' => 'Your identity on the field. If this leader reaches 0 health, you lose.',
+                    'effects' => [],
+                    'finish' => 'aurora',
+                    'frame_variant' => $factionCode.'-legendary',
+                    'sort' => 0,
+                ],
+            );
         }
     }
 
@@ -155,22 +161,79 @@ class GameDataSeeder extends Seeder
             default => 'standard',
         };
 
-        Card::create([
-            'code' => $code,
-            'set_id' => $set->id,
-            'faction_id' => $faction?->id,
-            'name' => $name,
-            'type' => $type,
-            'cost' => $cost,
-            'rarity' => $rarity,
-            'power' => $power,
-            'health' => $health,
-            'keywords' => $keywords,
-            'text' => $text,
-            'effects' => $effects,
-            'finish' => $finish,
-            'frame_variant' => ($faction?->code ?? 'neutral').'-'.$rarity,
-            'sort' => 0,
-        ]);
+        Card::updateOrCreate(
+            ['code' => $code],
+            [
+                'set_id' => $set->id,
+                'faction_id' => $faction?->id,
+                'name' => $name,
+                'type' => $type,
+                'cost' => $cost,
+                'rarity' => $rarity,
+                'power' => $power,
+                'health' => $health,
+                'keywords' => $keywords,
+                'text' => $text,
+                'effects' => $this->normalizeEffects($effects),
+                'finish' => $finish,
+                'frame_variant' => ($faction?->code ?? 'neutral').'-'.$rarity,
+                'sort' => 0,
+            ],
+        );
+    }
+
+    /**
+     * Convert the compact authoring format into the engine's CardEffect shape.
+     *
+     * The engine expects `[{trigger: 'on_play', actions: [{kind, target}]}]`
+     * with `target` as `{kind, scope}`. The seeder rows use a flat shorthand:
+     * `['kind' => 'damage', 'target' => 'target_unit', 'scope' => 'enemy_unit']`.
+     *
+     * @param  array<int, array<string, mixed>>  $effects
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeEffects(array $effects): array
+    {
+        if ($effects === []) {
+            return [];
+        }
+
+        return [
+            [
+                'trigger' => 'on_play',
+                'actions' => array_map(
+                    fn (array $action): array => $this->normalizeAction($action),
+                    $effects,
+                ),
+            ],
+        ];
+    }
+
+    /**
+     * Normalize a single flat action row into the engine's EffectAction shape.
+     *
+     * @param  array<string, mixed>  $action
+     * @return array<string, mixed>
+     */
+    private function normalizeAction(array $action): array
+    {
+        if (! isset($action['target'])) {
+            return $action;
+        }
+
+        $target = $action['target'];
+        $scope = $action['scope'] ?? null;
+        unset($action['target'], $action['scope']);
+
+        if ($target === 'target_unit') {
+            $action['target'] = [
+                'kind' => 'target_unit',
+                'scope' => $scope ?? 'any_unit',
+            ];
+        } else {
+            $action['target'] = ['kind' => $target];
+        }
+
+        return $action;
     }
 }
