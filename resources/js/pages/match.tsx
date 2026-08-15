@@ -1,5 +1,5 @@
-import { Head } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
+import { Head, router } from '@inertiajs/react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { CardVisual } from '@/components/card/card-visual';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,7 @@ import type {
 } from '@/lib/game/types';
 import { cn } from '@/lib/utils';
 import { match } from '@/routes';
+import matchComplete from '@/routes/match';
 
 type Selection =
     | { kind: 'play'; handIndex: number }
@@ -84,6 +85,7 @@ export default function Match({ factions, cards }: Props) {
             ),
         [factions],
     );
+    const finishedRef = useRef(false);
     const [setup, setSetup] = useState<SetupState>({
         p1Name: 'Player 1',
         p1Faction: 'dawnspire',
@@ -306,8 +308,30 @@ export default function Match({ factions, cards }: Props) {
                 seed: Date.now() >>> 0,
             }),
         );
+        finishedRef.current = false;
         setSelection(null);
     };
+
+    const winner = game?.state.winner ?? null;
+
+    useEffect(() => {
+        if (!game || winner === null || finishedRef.current) {
+            return;
+        }
+
+        finishedRef.current = true;
+        router.post(
+            matchComplete.complete(),
+            {},
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onError: () => {
+                    finishedRef.current = false;
+                },
+            },
+        );
+    }, [game, winner]);
 
     const current = game?.state.currentPlayer;
 

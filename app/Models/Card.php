@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @property int $id
@@ -77,6 +78,18 @@ class Card extends Model
     public function userCards(): HasMany
     {
         return $this->hasMany(UserCard::class);
+    }
+
+    /**
+     * Public URL for this card's uploaded art, if any.
+     */
+    public function artUrl(): ?string
+    {
+        if (! $this->art_url) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($this->art_url);
     }
 
     protected function casts(): array

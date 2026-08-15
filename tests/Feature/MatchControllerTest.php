@@ -44,5 +44,21 @@ class MatchControllerTest extends TestCase
     {
         $response = $this->get(route('match'));
         $response->assertRedirect(route('login'));
+
+        $this->post(route('match.complete'))->assertRedirect(route('login'));
+    }
+
+    public function test_completing_a_match_tracks_the_first_battle_quest(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $this->post(route('match.complete'))->assertRedirect();
+
+        $this->assertDatabaseHas('user_quests', [
+            'user_id' => $user->id,
+            'key' => 'play_match',
+            'progress' => 1,
+        ]);
     }
 }

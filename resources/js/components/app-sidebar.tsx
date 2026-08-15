@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
     BookOpen,
     FolderGit2,
@@ -25,6 +25,7 @@ import collection from '@/routes/collection';
 import decks from '@/routes/decks';
 import packs from '@/routes/packs';
 import type { NavItem } from '@/types';
+import { adminNavItems } from '@/types/navigation';
 
 const mainNavItems: NavItem[] = [
     {
@@ -68,6 +69,12 @@ const footerNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
+    const { auth } = usePage().props;
+    const isAdmin = auth.user?.is_admin === true;
+
+    console.log('[sidebar] auth.user:', auth.user);
+    console.log('[sidebar] is_admin:', auth.user?.is_admin, '=> isAdmin:', isAdmin);
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -84,6 +91,7 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <NavMain items={mainNavItems} />
+                {isAdmin && <NavMain items={adminNavItems} label="Admin" />}
             </SidebarContent>
 
             <SidebarFooter>

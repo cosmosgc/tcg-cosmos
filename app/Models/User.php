@@ -27,10 +27,11 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string|null $remember_token
  * @property int $gems
  * @property int $dust
+ * @property bool $is_admin
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'password', 'gems', 'dust'])]
+#[Fillable(['name', 'email', 'password', 'gems', 'dust', 'is_admin'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
@@ -40,12 +41,21 @@ class User extends Authenticatable implements PasskeyUser
     /**
      * The model's default attribute values.
      *
-     * @var array<string, int>
+     * @var array<string, int|bool>
      */
     protected $attributes = [
         'gems' => 0,
         'dust' => 0,
+        'is_admin' => false,
     ];
+
+    /**
+     * Whether this user is a game administrator.
+     */
+    public function isAdmin(): bool
+    {
+        return (bool) $this->is_admin;
+    }
 
     /**
      * The cards this user owns.
@@ -87,6 +97,7 @@ class User extends Authenticatable implements PasskeyUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_admin' => 'boolean',
             'two_factor_confirmed_at' => 'datetime',
         ];
     }

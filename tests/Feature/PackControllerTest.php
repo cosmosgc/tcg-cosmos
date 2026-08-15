@@ -55,6 +55,11 @@ class PackControllerTest extends TestCase
         $this->assertSame(0, $props['wallet']['gems']);
         $this->assertDatabaseCount('pack_openings', 1);
         $this->assertDatabaseHas('user_cards', ['user_id' => $user->id]);
+        $this->assertDatabaseHas('user_quests', [
+            'user_id' => $user->id,
+            'key' => 'open_pack',
+            'progress' => 1,
+        ]);
     }
 
     public function test_opening_a_pack_without_enough_gems_is_rejected(): void

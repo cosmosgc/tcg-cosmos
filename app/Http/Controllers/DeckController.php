@@ -7,6 +7,7 @@ use App\Models\Deck;
 use App\Models\Faction;
 use App\Services\DeckRules;
 use App\Services\InventoryService;
+use App\Services\QuestService;
 use App\Support\CardPresenter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,7 @@ class DeckController extends Controller
     public function __construct(
         private readonly DeckRules $rules,
         private readonly InventoryService $inventory,
+        private readonly QuestService $quests,
     ) {}
 
     /**
@@ -107,6 +109,8 @@ class DeckController extends Controller
             'cards' => $data['cards'],
         ]);
 
+        $this->quests->track($request->user(), 'save_deck');
+
         return redirect()->route('decks.index');
     }
 
@@ -134,6 +138,8 @@ class DeckController extends Controller
             'leader_card_code' => $data['leaderCardCode'],
             'cards' => $data['cards'],
         ]);
+
+        $this->quests->track($request->user(), 'save_deck');
 
         return redirect()->route('decks.index');
     }

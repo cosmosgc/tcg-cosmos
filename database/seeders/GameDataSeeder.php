@@ -176,7 +176,7 @@ class GameDataSeeder extends Seeder
                 'text' => $text,
                 'effects' => $this->normalizeEffects($effects),
                 'finish' => $finish,
-                'frame_variant' => ($faction?->code ?? 'neutral').'-'.$rarity,
+                'frame_variant' => ($faction === null ? 'neutral' : $faction->code).'-'.$rarity,
                 'sort' => 0,
             ],
         );

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\BoosterPack;
 use App\Models\Card;
 use App\Models\PackOpening;
 use App\Models\User;
@@ -10,7 +11,7 @@ use Random\Randomizer;
 class BoosterService
 {
     /**
-     * The single launch booster.
+     * The single launch booster, used until an admin configures one in the DB.
      */
     public const PACK_ID = 'celestial-genesis';
 
@@ -59,6 +60,36 @@ class BoosterService
     ) {}
 
     /**
+     * The enabled booster pack an admin configured, or null to fall back to
+     * the legacy constant defaults.
+     */
+    public function activePack(): ?BoosterPack
+    {
+        return BoosterPack::query()
+            ->where('enabled', true)
+            ->orderBy('code')
+            ->first();
+    }
+
+    /**
+     * The display shape of the active pack (or the legacy defaults).
+     *
+     * @return array{id: string, name: string, cost: int, size: int, dropRates: array<int, array{slot: string, rates: array<int, array{rarity: string, chance: float}>}>}
+     */
+    public function packInfo(): array
+    {
+        $pack = $this->activePack();
+
+        return [
+            'id' => $pack === null ? self::PACK_ID : $pack->code,
+            'name' => $pack === null ? 'Celestial Genesis Booster' : $pack->name,
+            'cost' => $pack === null ? self::PACK_COST : $pack->cost,
+            'size' => $pack === null ? self::PACK_SIZE : $pack->size,
+            'dropRates' => $this->dropRates($pack),
+        ];
+    }
+
+    /**
      * Open a booster: charge gems, generate cards from the drop table,
      * grant them to the user's inventory, and log the opening.
      *
@@ -66,19 +97,22 @@ class BoosterService
      */
     public function open(User $user): array
     {
-        if ($user->gems < self::PACK_COST) {
+        $pack = $this->activePack();
+        $cost = $pack === null ? self::PACK_COST : $pack->cost;
+
+        if ($user->gems < $cost) {
             throw new \RuntimeException('Not enough gems to open this booster.');
         }
 
-        $user->decrement('gems', self::PACK_COST);
+        $user->decrement('gems', $cost);
 
-        $items = $this->generate();
+        $items = $this->generate($pack);
 
         $result = $this->inventory->grantCards($user, $items);
 
         PackOpening::create([
             'user_id' => $user->id,
-            'pack_id' => self::PACK_ID,
+            'pack_id' => $pack === null ? self::PACK_ID : $pack->code,
             'reward_table_version' => self::REWARD_TABLE_VERSION,
             'cards' => $this->auditLog($items, $result['granted']),
             'dust_gained' => $result['dust'],
@@ -118,22 +152,26 @@ class BoosterService
     }
 
     /**
-     * Generate a pack's contents from the drop table. Always returns exactly
-     * PACK_SIZE cards: commons fill the guaranteed slots, then one uncommon-or-
-     * better slot and one rare-or-better slot.
+     * Generate a pack's contents from the drop table. Commons fill the
+     * guaranteed slots, then one uncommon-or-better slot and one rare-or-
+     * better slot.
      *
      * @return array<int, array{code: string, finish: string}>
      */
-    public function generate(): array
+    public function generate(?BoosterPack $pack = null): array
     {
+        $size = $pack === null ? self::PACK_SIZE : $pack->size;
         $items = [];
 
-        for ($i = 0; $i < self::PACK_SIZE - 2; $i++) {
+        for ($i = 0; $i < max(1, $size - 2); $i++) {
             $items[] = $this->pickCard('common');
         }
 
-        $items[] = $this->pickCard($this->weightedRarity(self::UNCOMMON_OR_BETTER));
-        $items[] = $this->pickCard($this->weightedRarity(self::RARE_OR_BETTER));
+        $uncommon = $pack === null ? self::UNCOMMON_OR_BETTER : ($pack->drop_rates['uncommon_or_better'] ?? self::UNCOMMON_OR_BETTER);
+        $rare = $pack === null ? self::RARE_OR_BETTER : ($pack->drop_rates['rare_or_better'] ?? self::RARE_OR_BETTER);
+
+        $items[] = $this->pickCard($this->weightedRarity($uncommon));
+        $items[] = $this->pickCard($this->weightedRarity($rare));
 
         return $items;
     }
@@ -210,5 +248,46 @@ class BoosterService
         }
 
         return $base;
+    }
+
+    /**
+     * Human-readable drop rates for the UI, following the same slot layout
+     * the generator uses.
+     *
+     * @return array<int, array{slot: string, rates: array<int, array{rarity: string, chance: float}>}>
+     */
+    private function dropRates(?BoosterPack $pack): array
+    {
+        $uncommon = $pack === null ? self::UNCOMMON_OR_BETTER : ($pack->drop_rates['uncommon_or_better'] ?? self::UNCOMMON_OR_BETTER);
+        $rare = $pack === null ? self::RARE_OR_BETTER : ($pack->drop_rates['rare_or_better'] ?? self::RARE_OR_BETTER);
+        $size = $pack === null ? self::PACK_SIZE : $pack->size;
+
+        $slots = [
+            'common' => ['common' => max(1, $size - 2)],
+            'uncommon or better' => $uncommon,
+            'rare or better' => $rare,
+        ];
+
+        $rates = [];
+
+        foreach ($slots as $slot => $weights) {
+            $total = array_sum($weights);
+
+            $slotRates = [];
+
+            foreach ($weights as $rarity => $weight) {
+                $slotRates[] = [
+                    'rarity' => $rarity,
+                    'chance' => round(($weight / $total) * 100, 1),
+                ];
+            }
+
+            $rates[] = [
+                'slot' => $slot,
+                'rates' => $slotRates,
+            ];
+        }
+
+        return $rates;
     }
 }

@@ -122,6 +122,11 @@ class DeckControllerTest extends TestCase
             'name' => 'Test Dawn',
             'leader_card_code' => 'leader-dawnspire',
         ]);
+        $this->assertDatabaseHas('user_quests', [
+            'user_id' => $user->id,
+            'key' => 'save_deck',
+            'progress' => 1,
+        ]);
     }
 
     public function test_an_illegal_deck_is_rejected(): void

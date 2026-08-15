@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\BoosterService;
+use App\Services\QuestService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -12,6 +13,7 @@ class PackController extends Controller
 {
     public function __construct(
         private readonly BoosterService $booster,
+        private readonly QuestService $quests,
     ) {}
 
     /**
@@ -22,13 +24,7 @@ class PackController extends Controller
         $user = auth()->user();
 
         return Inertia::render('packs', [
-            'pack' => [
-                'id' => BoosterService::PACK_ID,
-                'name' => 'Celestial Genesis Booster',
-                'cost' => BoosterService::PACK_COST,
-                'size' => BoosterService::PACK_SIZE,
-                'dropRates' => $this->dropRates(),
-            ],
+            'pack' => $this->booster->packInfo(),
             'wallet' => [
                 'gems' => $user->gems,
                 'dust' => $user->dust,
@@ -50,14 +46,10 @@ class PackController extends Controller
             return back()->withErrors(['pack' => $exception->getMessage()]);
         }
 
+        $this->quests->track($user, 'open_pack');
+
         return Inertia::render('packs', [
-            'pack' => [
-                'id' => BoosterService::PACK_ID,
-                'name' => 'Celestial Genesis Booster',
-                'cost' => BoosterService::PACK_COST,
-                'size' => BoosterService::PACK_SIZE,
-                'dropRates' => $this->dropRates(),
-            ],
+            'pack' => $this->booster->packInfo(),
             'wallet' => [
                 'gems' => $opening['gems'],
                 'dust' => $user->fresh()->dust,
@@ -68,43 +60,5 @@ class PackController extends Controller
                 'openedAt' => now()->toIso8601String(),
             ],
         ]);
-    }
-
-    /**
-     * Human-readable drop rates for the UI.
-     *
-     * @return array<int, array{slot: string, rates: array<int, array{rarity: string, chance: float}>}>
-     */
-    private function dropRates(): array
-    {
-        $slots = [
-            'common' => [
-                'common' => BoosterService::PACK_SIZE - 2,
-            ],
-            'uncommon or better' => BoosterService::UNCOMMON_OR_BETTER,
-            'rare or better' => BoosterService::RARE_OR_BETTER,
-        ];
-
-        $rates = [];
-
-        foreach ($slots as $slot => $weights) {
-            $total = array_sum($weights);
-
-            $slotRates = [];
-
-            foreach ($weights as $rarity => $weight) {
-                $slotRates[] = [
-                    'rarity' => $rarity,
-                    'chance' => round(($weight / $total) * 100, 1),
-                ];
-            }
-
-            $rates[] = [
-                'slot' => $slot,
-                'rates' => $slotRates,
-            ];
-        }
-
-        return $rates;
     }
 }

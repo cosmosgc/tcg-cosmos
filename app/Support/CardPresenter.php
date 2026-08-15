@@ -15,8 +15,8 @@ class CardPresenter
     {
         return [
             'id' => $card->code,
-            'set' => $card->set?->code ?? 'celestial-genesis',
-            'faction' => $card->faction?->code ?? 'neutral',
+            'set' => $card->set === null ? 'celestial-genesis' : $card->set->code,
+            'faction' => $card->faction === null ? 'neutral' : $card->faction->code,
             'name' => $card->name,
             'type' => $card->type,
             'rarity' => $card->rarity,
@@ -28,7 +28,7 @@ class CardPresenter
             'effects' => $card->effects,
             'finish' => $card->finish,
             'frameVariant' => $card->frame_variant ?? $card->rarity,
-            'artUrl' => $card->art_url,
+            'artUrl' => $card->artUrl(),
         ];
     }
 }
